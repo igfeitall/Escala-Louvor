@@ -19,7 +19,7 @@ import {
 } from './services/api';
 import type { Member, ParseResult, Role, ScheduleEntry } from './types';
 import { mergeOverridesFromParseResult } from './utils/availability';
-import { getMonthLabel, getServiceDates } from './utils/calendar';
+import { getMonthLabel, getMonthOptionLabel, getServiceDates } from './utils/calendar';
 
 function downloadCsv(csv: string, month: number, year: number) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -199,9 +199,7 @@ export default function App() {
             >
               {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
                 <option key={value} value={value}>
-                  {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(
-                    new Date(year, value - 1, 1),
-                  )}
+                  {getMonthOptionLabel(value, year)}
                 </option>
               ))}
             </select>

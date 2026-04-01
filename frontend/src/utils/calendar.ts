@@ -1,8 +1,26 @@
+function capitalizeFirstLetter(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export function getMonthLabel(month: number, year: number) {
-  return new Intl.DateTimeFormat('pt-BR', {
+  return capitalizeFirstLetter(
+    new Intl.DateTimeFormat('pt-BR', {
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, 1)),
+  );
+}
+
+export function getMonthOptionLabel(month: number, year: number) {
+  return capitalizeFirstLetter(
+    new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
-    year: 'numeric',
-  }).format(new Date(year, month - 1, 1));
+    }).format(new Date(year, month - 1, 1)),
+  );
 }
 
 export function getServiceDates(month: number, year: number) {
