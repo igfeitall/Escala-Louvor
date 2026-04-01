@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -46,6 +46,7 @@ export default function App() {
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const editFormRef = useRef<HTMLDivElement | null>(null);
 
   const monthLabel = getMonthLabel(month, year);
   const serviceDates = useMemo(() => getServiceDates(month, year), [month, year]);
@@ -72,6 +73,14 @@ export default function App() {
     setParseResult(null);
     setOverrides({});
   }, [month, year]);
+
+  useEffect(() => {
+    if (!showForm || !editingMember || !editFormRef.current) {
+      return;
+    }
+
+    editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editingMember, showForm]);
 
   async function handleSaveMember(input: { name: string; roles: Role[]; notes?: string }) {
     try {
@@ -225,14 +234,16 @@ export default function App() {
         </section>
 
         {showForm ? (
-          <MemberForm
-            initialValue={editingMember}
-            onCancel={() => {
-              setShowForm(false);
-              setEditingMember(null);
-            }}
-            onSubmit={handleSaveMember}
-          />
+          <div ref={editFormRef}>
+            <MemberForm
+              initialValue={editingMember}
+              onCancel={() => {
+                setShowForm(false);
+                setEditingMember(null);
+              }}
+              onSubmit={handleSaveMember}
+            />
+          </div>
         ) : null}
 
         <MemberManager
