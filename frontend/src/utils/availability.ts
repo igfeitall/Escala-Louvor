@@ -11,9 +11,9 @@ export function mergeOverridesFromParseResult(
       return;
     }
 
-    const currentDates = new Set(nextOverrides[row.matchedMember.id] ?? []);
-    row.unavailableDates.forEach((date) => currentDates.add(date));
-    nextOverrides[row.matchedMember.id] = [...currentDates].sort();
+    const currentServiceKeys = new Set(nextOverrides[row.matchedMember.id] ?? []);
+    row.unavailableServices.forEach((service) => currentServiceKeys.add(service.serviceKey));
+    nextOverrides[row.matchedMember.id] = [...currentServiceKeys].sort();
   });
 
   return nextOverrides;

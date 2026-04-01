@@ -2,6 +2,13 @@ import type { Role } from '../constants/roles.js';
 
 export type ServiceType = 'SUNDAY_MORNING' | 'SUNDAY_EVENING' | 'WEDNESDAY';
 
+export interface ServiceSlot {
+  serviceKey: string;
+  date: string;
+  serviceType: ServiceType;
+  serviceLabel: string;
+}
+
 export interface MemberRecord {
   id: string;
   name: string;
@@ -16,7 +23,7 @@ export interface ParsedRow {
   name: string;
   normalizedName: string;
   roles: Role[];
-  unavailableDates: string[];
+  unavailableServices: ServiceSlot[];
   matchedMember: { id: string; name: string } | null;
 }
 
@@ -30,7 +37,7 @@ export interface ParseResult {
 
 export interface AvailabilityOverride {
   memberId: string;
-  unavailableDates: string[];
+  unavailableServiceKeys: string[];
 }
 
 export interface ScheduleEntry {

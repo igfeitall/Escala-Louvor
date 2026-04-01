@@ -19,7 +19,7 @@ import {
 } from './services/api';
 import type { Member, ParseResult, Role, ScheduleEntry } from './types';
 import { mergeOverridesFromParseResult } from './utils/availability';
-import { getMonthLabel, getMonthOptionLabel, getServiceDates } from './utils/calendar';
+import { getMonthLabel, getMonthOptionLabel, getServiceSlots } from './utils/calendar';
 
 function downloadCsv(csv: string, month: number, year: number) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -49,7 +49,7 @@ export default function App() {
   const editFormRef = useRef<HTMLDivElement | null>(null);
 
   const monthLabel = getMonthLabel(month, year);
-  const serviceDates = useMemo(() => getServiceDates(month, year), [month, year]);
+  const serviceSlots = useMemo(() => getServiceSlots(month, year), [month, year]);
 
   async function loadMembers() {
     setIsLoadingMembers(true);
@@ -144,19 +144,19 @@ export default function App() {
     }
   }
 
-  function toggleAvailability(memberId: string, date: string) {
+  function toggleAvailability(memberId: string, serviceKey: string) {
     setOverrides((current) => {
-      const dates = new Set(current[memberId] ?? []);
+      const serviceKeys = new Set(current[memberId] ?? []);
 
-      if (dates.has(date)) {
-        dates.delete(date);
+      if (serviceKeys.has(serviceKey)) {
+        serviceKeys.delete(serviceKey);
       } else {
-        dates.add(date);
+        serviceKeys.add(serviceKey);
       }
 
       return {
         ...current,
-        [memberId]: [...dates].sort(),
+        [memberId]: [...serviceKeys].sort(),
       };
     });
   }
@@ -165,9 +165,9 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      const payload = Object.entries(overrides).map(([memberId, unavailableDates]) => ({
+      const payload = Object.entries(overrides).map(([memberId, unavailableServiceKeys]) => ({
         memberId,
-        unavailableDates,
+        unavailableServiceKeys,
       }));
       const result = await generateSchedule(month, year, payload);
       setSchedule(result.schedule);
@@ -194,8 +194,8 @@ export default function App() {
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar pauseOnFocusLoss={false} />
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
         <Header
-          title={`Escala de Louvor • ${monthLabel}`}
-          subtitle="Gerencie membros, importe indisponibilidades do mes e gere uma escala equilibrada para domingos e quartas-feiras."
+          title={`Escala de Louvor - ${monthLabel}`}
+          subtitle="Gerencie membros, importe indisponibilidades do mes e gere uma escala equilibrada por culto."
         />
 
         <section className="grid gap-4 rounded-[2rem] border border-white/70 bg-white/70 p-5 shadow-panel md:grid-cols-[1fr_1fr_auto] print:hidden">
@@ -271,7 +271,7 @@ export default function App() {
 
         <AvailabilityEditor
           members={members}
-          serviceDates={serviceDates}
+          serviceSlots={serviceSlots}
           overrides={overrides}
           onToggle={toggleAvailability}
         />

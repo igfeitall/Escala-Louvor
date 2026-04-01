@@ -1,14 +1,14 @@
 import { SERVICE_LABELS } from '../constants/services.js';
-import type { ScheduleEntry, ServiceType } from '../types/index.js';
+import type { ScheduleEntry, ServiceSlot, ServiceType } from '../types/index.js';
 
-interface ServiceDefinition {
-  date: string;
-  serviceType: ServiceType;
-  serviceLabel: string;
-}
+type ServiceDefinition = ServiceSlot;
 
 function toIsoDate(year: number, month: number, day: number) {
   return new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10);
+}
+
+export function createServiceKey(date: string, serviceType: ServiceType) {
+  return `${date}|${serviceType}`;
 }
 
 export function enumerateServices(month: number, year: number): ServiceDefinition[] {
@@ -24,11 +24,13 @@ export function enumerateServices(month: number, year: number): ServiceDefinitio
         date,
         serviceType: 'SUNDAY_MORNING',
         serviceLabel: SERVICE_LABELS.SUNDAY_MORNING,
+        serviceKey: createServiceKey(date, 'SUNDAY_MORNING'),
       });
       services.push({
         date,
         serviceType: 'SUNDAY_EVENING',
         serviceLabel: SERVICE_LABELS.SUNDAY_EVENING,
+        serviceKey: createServiceKey(date, 'SUNDAY_EVENING'),
       });
     }
 
@@ -37,6 +39,7 @@ export function enumerateServices(month: number, year: number): ServiceDefinitio
         date,
         serviceType: 'WEDNESDAY',
         serviceLabel: SERVICE_LABELS.WEDNESDAY,
+        serviceKey: createServiceKey(date, 'WEDNESDAY'),
       });
     }
 

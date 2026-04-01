@@ -1,5 +1,10 @@
 import { SCHEDULING_ROLE_ORDER, type Role } from '../constants/roles.js';
-import { createEmptyScheduleEntry, enumerateServices, getWeekKey } from './dateUtils.js';
+import {
+  createEmptyScheduleEntry,
+  createServiceKey,
+  enumerateServices,
+  getWeekKey,
+} from './dateUtils.js';
 import type { AvailabilityOverride, MemberRecord, ScheduleEntry } from '../types/index.js';
 
 interface SchedulingState {
@@ -32,7 +37,7 @@ function getUnavailableSet(overrides: AvailabilityOverride[]) {
   const map = new Map<string, Set<string>>();
 
   overrides.forEach((override) => {
-    map.set(override.memberId, new Set(override.unavailableDates));
+    map.set(override.memberId, new Set(override.unavailableServiceKeys));
   });
 
   return map;
@@ -109,7 +114,12 @@ export function generateSchedule(
       const candidates = members
         .filter((member) => member.roles.includes(role))
         .filter((member) => !assignedMemberIds.has(member.id))
-        .filter((member) => !unavailableMap.get(member.id)?.has(service.date))
+        .filter(
+          (member) =>
+            !unavailableMap
+              .get(member.id)
+              ?.has(createServiceKey(service.date, service.serviceType)),
+        )
         .map((member) => ({
           member,
           score: getScore(member, role, serviceIndex, weekKey, state),

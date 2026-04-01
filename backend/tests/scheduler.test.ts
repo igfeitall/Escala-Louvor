@@ -60,7 +60,7 @@ describe('generateSchedule', () => {
     const overrides: AvailabilityOverride[] = [
       {
         memberId: '1',
-        unavailableDates: ['2026-04-05'],
+        unavailableServiceKeys: ['2026-04-05|SUNDAY_MORNING'],
       },
     ];
 

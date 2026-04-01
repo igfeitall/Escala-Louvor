@@ -10,6 +10,13 @@ export const ROLE_OPTIONS = [
 
 export type Role = (typeof ROLE_OPTIONS)[number];
 
+export interface ServiceSlot {
+  serviceKey: string;
+  date: string;
+  serviceType: 'SUNDAY_MORNING' | 'SUNDAY_EVENING' | 'WEDNESDAY';
+  serviceLabel: string;
+}
+
 export interface Member {
   id: string;
   name: string;
@@ -24,7 +31,7 @@ export interface ParsedRow {
   name: string;
   normalizedName: string;
   roles: Role[];
-  unavailableDates: string[];
+  unavailableServices: ServiceSlot[];
   matchedMember: { id: string; name: string } | null;
 }
 
@@ -38,7 +45,7 @@ export interface ParseResult {
 
 export interface AvailabilityOverride {
   memberId: string;
-  unavailableDates: string[];
+  unavailableServiceKeys: string[];
 }
 
 export interface ScheduleEntry {
