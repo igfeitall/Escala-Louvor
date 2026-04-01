@@ -15,7 +15,9 @@
     "test": "yarn workspace backend test && yarn workspace frontend test",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml}\"",
-    "docker:up": "docker compose up -d --build",
+    "docker:up": "docker compose up -d",
+    "docker:db:up": "docker compose up -d",
+    "docker:db:reset": "docker compose down -v && docker compose up -d",
     "docker:down": "docker compose down"
   },
   "devDependencies": {

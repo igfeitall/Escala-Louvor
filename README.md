@@ -7,33 +7,79 @@ Aplicacao full-stack em TypeScript para cadastrar membros do ministerio de louvo
 - Frontend: React 18 + Vite + TailwindCSS
 - Backend: Express + Mongoose + TypeScript
 - Banco: MongoDB 7
-- Infra: Docker Compose
+- Infra: Docker Compose apenas para o MongoDB
 
-## Decisoes do v1
+## Scripts principais
 
-- Catalogo fixo de funcoes: `MINISTRO`, `APOIO`, `VIOLAO`, `GUITARRA`, `TECLADO`, `BAIXO`, `BATERIA`
-- Cultos fixos por mes: domingo de manha, domingo a noite e quarta-feira
-- Indisponibilidade fica salva por mes e por culto no banco
-- Escalas sao geradas sob demanda e nao sao persistidas
-- Nomes importados que nao existirem no banco aparecem como aviso e ficam fora do agendamento
+- `yarn dev`: roda frontend e backend juntos com atualizacao automatica de codigo
+- `yarn frontend`: sobe so o frontend em `http://localhost:5173`
+- `yarn backend`: sobe so o backend em `http://localhost:3001`
+- `yarn docker:up`: sobe so o MongoDB no Docker
+- `yarn docker:db:reset`: apaga o volume do MongoDB e recria do zero
+- `yarn docker:down`: encerra o MongoDB no Docker
 
-## Scripts
+## Como rodar
 
-- `yarn dev`: frontend e backend em modo de desenvolvimento
-- `yarn build`: build dos dois pacotes
-- `yarn lint`: ESLint no monorepo
-- `yarn typecheck`: checagem de tipos
-- `yarn test`: testes de frontend e backend
-- `yarn docker:up`: sobe frontend, backend e MongoDB
-- `yarn docker:down`: encerra os containers
+### 1. Instalar dependencias
 
-## Desenvolvimento local
+```bash
+yarn install
+```
 
-1. Instale dependencias com `yarn install`
-2. Suba o MongoDB com Docker ou configure `MONGODB_URI`
-3. Rode `yarn dev`
+### 2. Subir o MongoDB no Docker
 
-O frontend abre em `http://localhost:5173` e o backend em `http://localhost:3001`.
+```bash
+yarn docker:up
+```
+
+Isso sobe o MongoDB em `mongodb://127.0.0.1:27017/escala-louvor`.
+
+### 3. Rodar frontend e backend juntos
+
+```bash
+yarn dev
+```
+
+Esse e o comando ideal para desenvolvimento. Ele faz:
+
+- frontend com Vite e hot reload em `http://localhost:5173`
+- backend com `tsx watch` em `http://localhost:3001`
+
+Ou seja, quando voce altera codigo do front ou do back, os dois atualizam automaticamente.
+
+## Rodar separado
+
+Se preferir abrir cada parte em um terminal:
+
+```bash
+yarn frontend
+```
+
+```bash
+yarn backend
+```
+
+## Como atualizar o backend
+
+Como o backend agora roda localmente em modo watch, normalmente voce nao precisa reiniciar manualmente. Basta salvar o arquivo e o `tsx watch` recarrega.
+
+Se quiser reiniciar manualmente, pare o `yarn dev` e rode de novo:
+
+```bash
+yarn dev
+```
+
+## Como atualizar o banco
+
+Na maior parte das mudancas, basta deixar o MongoDB rodando e reiniciar o app local. Como o MongoDB e flexivel, muitos ajustes nao exigem migracao.
+
+Se quiser limpar tudo e recriar o banco:
+
+```bash
+yarn docker:db:reset
+```
+
+Esse comando apaga todos os dados do MongoDB.
 
 ## Importacao
 
@@ -44,11 +90,3 @@ Nome,Funcoes,Indisponivel
 Joao Silva,"Teclado, Apoio","05/04 (Domingo - manha), 12/04 (Domingo - noite)"
 Maria Santos,"Ministro, Violao","12/04 (Domingo - manha)"
 ```
-
-## Docker
-
-`docker compose up -d --build` sobe:
-
-- frontend em `http://localhost:3000`
-- backend em `http://localhost:3001`
-- MongoDB em rede interna com volume nomeado
