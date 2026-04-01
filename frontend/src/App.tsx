@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import { AvailabilityEditor } from './components/AvailabilityEditor';
 import { FileUpload } from './components/FileUpload';
@@ -44,8 +46,6 @@ export default function App() {
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const monthLabel = getMonthLabel(month, year);
   const serviceDates = useMemo(() => getServiceDates(month, year), [month, year]);
@@ -57,7 +57,7 @@ export default function App() {
       const nextMembers = await fetchMembers();
       setMembers(nextMembers);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar membros.');
+      toast.error(loadError instanceof Error ? loadError.message : 'Erro ao carregar membros.');
     } finally {
       setIsLoadingMembers(false);
     }
@@ -74,23 +74,20 @@ export default function App() {
   }, [month, year]);
 
   async function handleSaveMember(input: { name: string; roles: Role[]; notes?: string }) {
-    setError(null);
-    setFeedback(null);
-
     try {
       if (editingMember) {
         await updateMember(editingMember.id, input);
-        setFeedback('Membro atualizado com sucesso.');
+        toast.success('Membro atualizado com sucesso.');
       } else {
         await createMember(input);
-        setFeedback('Membro criado com sucesso.');
+        toast.success('Membro criado com sucesso.');
       }
 
       setEditingMember(null);
       setShowForm(false);
       await loadMembers();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Erro ao salvar membro.');
+      toast.error(saveError instanceof Error ? saveError.message : 'Erro ao salvar membro.');
       throw saveError;
     }
   }
@@ -100,12 +97,9 @@ export default function App() {
       return;
     }
 
-    setError(null);
-    setFeedback(null);
-
     try {
       await deleteMember(member.id);
-      setFeedback('Membro removido.');
+      toast.success('Membro removido.');
       setOverrides((current) => {
         const next = { ...current };
         delete next[member.id];
@@ -113,7 +107,7 @@ export default function App() {
       });
       await loadMembers();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir membro.');
+      toast.error(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir membro.');
     }
   }
 
@@ -123,8 +117,6 @@ export default function App() {
     }
 
     setIsParsing(true);
-    setError(null);
-    setFeedback(null);
 
     try {
       const payload =
@@ -135,9 +127,9 @@ export default function App() {
       const result = await parseSpreadsheet(payload, month, year);
       setParseResult(result);
       setOverrides((current) => mergeOverridesFromParseResult(current, result));
-      setFeedback('Importação processada com sucesso.');
+      toast.success('Importacao processada com sucesso.');
     } catch (parseError) {
-      setError(parseError instanceof Error ? parseError.message : 'Erro ao processar importação.');
+      toast.error(parseError instanceof Error ? parseError.message : 'Erro ao processar importacao.');
     } finally {
       setIsParsing(false);
     }
@@ -162,8 +154,6 @@ export default function App() {
 
   async function handleGenerateSchedule() {
     setIsGenerating(true);
-    setError(null);
-    setFeedback(null);
 
     try {
       const payload = Object.entries(overrides).map(([memberId, unavailableDates]) => ({
@@ -172,9 +162,9 @@ export default function App() {
       }));
       const result = await generateSchedule(month, year, payload);
       setSchedule(result.schedule);
-      setFeedback('Escala gerada com sucesso.');
+      toast.success('Escala gerada com sucesso.');
     } catch (generateError) {
-      setError(generateError instanceof Error ? generateError.message : 'Erro ao gerar escala.');
+      toast.error(generateError instanceof Error ? generateError.message : 'Erro ao gerar escala.');
     } finally {
       setIsGenerating(false);
     }
@@ -184,43 +174,57 @@ export default function App() {
     try {
       const csv = await exportScheduleCsv(schedule);
       downloadCsv(csv, month, year);
+      toast.success('CSV exportado com sucesso.');
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : 'Erro ao exportar CSV.');
+      toast.error(exportError instanceof Error ? exportError.message : 'Erro ao exportar CSV.');
     }
   }
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#f6f1e8_0%,_#efe3d4_100%)] text-ink">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar pauseOnFocusLoss={false} />
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
         <Header
           title={`Escala de Louvor • ${monthLabel}`}
-          subtitle="Gerencie membros, importe indisponibilidades do mês e gere uma escala equilibrada para domingos e quartas-feiras."
+          subtitle="Gerencie membros, importe indisponibilidades do mes e gere uma escala equilibrada para domingos e quartas-feiras."
         />
 
         <section className="grid gap-4 rounded-[2rem] border border-white/70 bg-white/70 p-5 shadow-panel md:grid-cols-[1fr_1fr_auto] print:hidden">
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-stone-700">Mês</span>
-            <select className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" value={month} onChange={(event) => setMonth(Number(event.target.value))}>
+            <span className="text-sm font-semibold text-stone-700">Mes</span>
+            <select
+              className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3"
+              value={month}
+              onChange={(event) => setMonth(Number(event.target.value))}
+            >
               {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
                 <option key={value} value={value}>
-                  {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(year, value - 1, 1))}
+                  {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(
+                    new Date(year, value - 1, 1),
+                  )}
                 </option>
               ))}
             </select>
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-stone-700">Ano</span>
-            <input className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} />
+            <input
+              className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3"
+              type="number"
+              value={year}
+              onChange={(event) => setYear(Number(event.target.value))}
+            />
           </label>
           <div className="flex items-end">
-            <button className="w-full rounded-full bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90" disabled={isGenerating || isLoadingMembers} onClick={() => void handleGenerateSchedule()}>
+            <button
+              className="w-full rounded-full bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
+              disabled={isGenerating || isLoadingMembers}
+              onClick={() => void handleGenerateSchedule()}
+            >
               {isGenerating ? 'Gerando...' : 'Gerar escala'}
             </button>
           </div>
         </section>
-
-        {feedback ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 print:hidden">{feedback}</p> : null}
-        {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 print:hidden">{error}</p> : null}
 
         {showForm ? (
           <MemberForm
@@ -256,9 +260,16 @@ export default function App() {
           onParse={handleParse}
         />
 
-        <AvailabilityEditor members={members} serviceDates={serviceDates} overrides={overrides} onToggle={toggleAvailability} />
+        <AvailabilityEditor
+          members={members}
+          serviceDates={serviceDates}
+          overrides={overrides}
+          onToggle={toggleAvailability}
+        />
 
-        {schedule.length > 0 ? <ScheduleTable schedule={schedule} onExport={handleExportCsv} /> : null}
+        {schedule.length > 0 ? (
+          <ScheduleTable schedule={schedule} onExport={handleExportCsv} />
+        ) : null}
       </div>
     </div>
   );
