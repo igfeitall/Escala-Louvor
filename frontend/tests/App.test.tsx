@@ -8,9 +8,27 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock);
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => [],
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes('/api/members')) {
+        return {
+          ok: true,
+          json: async () => [],
+        };
+      }
+
+      if (url.includes('/api/availability')) {
+        return {
+          ok: true,
+          json: async () => ({ month: 4, year: 2026, overrides: [] }),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({}),
+      };
     });
   });
 
@@ -26,6 +44,10 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/api/members');
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/availability?month='));
     });
   });
 });

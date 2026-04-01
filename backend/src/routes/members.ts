@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { Member } from '../models/Member.js';
+import { MonthlyAvailability } from '../models/MonthlyAvailability.js';
 import { toMemberRecord } from '../services/memberSerializer.js';
 import { validateMemberInput } from '../services/memberValidation.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -32,7 +33,7 @@ membersRouter.put(
     const member = await Member.findById(request.params.id);
 
     if (!member) {
-      throw new HttpError(404, 'Membro não encontrado.');
+      throw new HttpError(404, 'Membro nao encontrado.');
     }
 
     member.name = data.name;
@@ -50,9 +51,10 @@ membersRouter.delete(
     const deletedMember = await Member.findByIdAndDelete(request.params.id);
 
     if (!deletedMember) {
-      throw new HttpError(404, 'Membro não encontrado.');
+      throw new HttpError(404, 'Membro nao encontrado.');
     }
 
+    await MonthlyAvailability.deleteMany({ memberId: request.params.id });
     response.status(204).send();
   }),
 );

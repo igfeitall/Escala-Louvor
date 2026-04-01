@@ -20,6 +20,7 @@ export function AvailabilityEditor({
         <h2 className="font-display text-2xl text-ink">Indisponibilidade do mes</h2>
         <p className="text-sm text-stone-600">
           Marque por culto. A mesma pessoa pode ficar indisponivel so de manha ou so a noite.
+          Essas alteracoes ficam salvas por mes.
         </p>
       </div>
 

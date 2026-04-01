@@ -3,6 +3,7 @@ import express from 'express';
 
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { availabilityRouter } from './routes/availability.js';
 import { healthRouter } from './routes/health.js';
 import { membersRouter } from './routes/members.js';
 import { scheduleRouter } from './routes/schedule.js';
@@ -22,6 +23,7 @@ export function createApp() {
   });
 
   app.use('/api/health', healthRouter);
+  app.use('/api/availability', availabilityRouter);
   app.use('/api/members', membersRouter);
   app.use('/api/schedule', scheduleRouter);
   app.use(errorHandler);

@@ -48,6 +48,12 @@ export interface AvailabilityOverride {
   unavailableServiceKeys: string[];
 }
 
+export interface AvailabilitySnapshot {
+  month: number;
+  year: number;
+  overrides: AvailabilityOverride[];
+}
+
 export interface ScheduleEntry {
   date: string;
   serviceType: 'SUNDAY_MORNING' | 'SUNDAY_EVENING' | 'WEDNESDAY';

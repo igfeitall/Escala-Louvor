@@ -12,13 +12,19 @@ import {
   createMember,
   deleteMember,
   exportScheduleCsv,
+  fetchAvailability,
   fetchMembers,
   generateSchedule,
   parseSpreadsheet,
+  saveAvailability,
   updateMember,
 } from './services/api';
 import type { Member, ParseResult, Role, ScheduleEntry } from './types';
-import { mergeOverridesFromParseResult } from './utils/availability';
+import {
+  mapOverridesToPayload,
+  mapOverridesToRecord,
+  mergeOverridesFromParseResult,
+} from './utils/availability';
 import { getMonthLabel, getMonthOptionLabel, getServiceSlots } from './utils/calendar';
 
 function downloadCsv(csv: string, month: number, year: number) {
@@ -44,6 +50,8 @@ export default function App() {
   const [overrides, setOverrides] = useState<Record<string, string[]>>({});
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
+  const [isSavingAvailability, setIsSavingAvailability] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const editFormRef = useRef<HTMLDivElement | null>(null);
@@ -64,14 +72,64 @@ export default function App() {
     }
   }
 
+  async function persistOverrides(nextOverrides: Record<string, string[]>) {
+    setIsSavingAvailability(true);
+
+    try {
+      await saveAvailability(month, year, mapOverridesToPayload(nextOverrides));
+    } catch (saveError) {
+      toast.error(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Erro ao salvar disponibilidade do mes.',
+      );
+      throw saveError;
+    } finally {
+      setIsSavingAvailability(false);
+    }
+  }
+
   useEffect(() => {
     void loadMembers();
   }, []);
 
   useEffect(() => {
+    let isActive = true;
+
     setSchedule([]);
     setParseResult(null);
     setOverrides({});
+    setIsLoadingAvailability(true);
+
+    void (async () => {
+      try {
+        const availability = await fetchAvailability(month, year);
+
+        if (!isActive) {
+          return;
+        }
+
+        setOverrides(mapOverridesToRecord(availability.overrides));
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+
+        toast.error(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Erro ao carregar disponibilidade do mes.',
+        );
+      } finally {
+        if (isActive) {
+          setIsLoadingAvailability(false);
+        }
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
   }, [month, year]);
 
   useEffect(() => {
@@ -106,14 +164,14 @@ export default function App() {
       return;
     }
 
+    const nextOverrides = { ...overrides };
+    delete nextOverrides[member.id];
+
     try {
       await deleteMember(member.id);
+      setOverrides(nextOverrides);
+      await persistOverrides(nextOverrides);
       toast.success('Membro removido.');
-      setOverrides((current) => {
-        const next = { ...current };
-        delete next[member.id];
-        return next;
-      });
       await loadMembers();
     } catch (deleteError) {
       toast.error(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir membro.');
@@ -134,8 +192,11 @@ export default function App() {
           type: 'text/csv;charset=utf-8',
         });
       const result = await parseSpreadsheet(payload, month, year);
+      const nextOverrides = mergeOverridesFromParseResult(overrides, result);
+
       setParseResult(result);
-      setOverrides((current) => mergeOverridesFromParseResult(current, result));
+      setOverrides(nextOverrides);
+      await persistOverrides(nextOverrides);
       toast.success('Importacao processada com sucesso.');
     } catch (parseError) {
       toast.error(parseError instanceof Error ? parseError.message : 'Erro ao processar importacao.');
@@ -145,30 +206,31 @@ export default function App() {
   }
 
   function toggleAvailability(memberId: string, serviceKey: string) {
-    setOverrides((current) => {
-      const serviceKeys = new Set(current[memberId] ?? []);
+    const serviceKeys = new Set(overrides[memberId] ?? []);
 
-      if (serviceKeys.has(serviceKey)) {
-        serviceKeys.delete(serviceKey);
-      } else {
-        serviceKeys.add(serviceKey);
-      }
+    if (serviceKeys.has(serviceKey)) {
+      serviceKeys.delete(serviceKey);
+    } else {
+      serviceKeys.add(serviceKey);
+    }
 
-      return {
-        ...current,
-        [memberId]: [...serviceKeys].sort(),
-      };
-    });
+    const nextOverrides = {
+      ...overrides,
+      [memberId]: [...serviceKeys].sort(),
+    };
+
+    setOverrides(nextOverrides);
+    void persistOverrides(nextOverrides);
   }
 
   async function handleGenerateSchedule() {
     setIsGenerating(true);
 
     try {
-      const payload = Object.entries(overrides).map(([memberId, unavailableServiceKeys]) => ({
-        memberId,
-        unavailableServiceKeys,
-      }));
+      const validMemberIds = new Set(members.map((member) => member.id));
+      const payload = mapOverridesToPayload(overrides).filter((override) =>
+        validMemberIds.has(override.memberId),
+      );
       const result = await generateSchedule(month, year, payload);
       setSchedule(result.schedule);
       toast.success('Escala gerada com sucesso.');
@@ -225,13 +287,25 @@ export default function App() {
           <div className="flex items-end">
             <button
               className="w-full rounded-full bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
-              disabled={isGenerating || isLoadingMembers}
+              disabled={isGenerating || isLoadingMembers || isLoadingAvailability}
               onClick={() => void handleGenerateSchedule()}
             >
               {isGenerating ? 'Gerando...' : 'Gerar escala'}
             </button>
           </div>
         </section>
+
+        {isLoadingAvailability ? (
+          <p className="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
+            Carregando disponibilidade salva para este mes...
+          </p>
+        ) : null}
+
+        {isSavingAvailability ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Salvando disponibilidade do mes...
+          </p>
+        ) : null}
 
         {showForm ? (
           <div ref={editFormRef}>

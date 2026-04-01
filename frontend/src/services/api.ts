@@ -1,4 +1,10 @@
-import type { AvailabilityOverride, Member, ParseResult, ScheduleEntry } from '../types';
+import type {
+  AvailabilityOverride,
+  AvailabilitySnapshot,
+  Member,
+  ParseResult,
+  ScheduleEntry,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -43,8 +49,27 @@ export async function deleteMember(id: string) {
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message ?? 'Não foi possível excluir o membro.');
+    throw new Error(payload?.message ?? 'Nao foi possivel excluir o membro.');
   }
+}
+
+export async function fetchAvailability(month: number, year: number) {
+  const response = await fetch(`${API_BASE_URL}/availability?month=${month}&year=${year}`);
+  return parseJson<AvailabilitySnapshot>(response);
+}
+
+export async function saveAvailability(
+  month: number,
+  year: number,
+  overrides: AvailabilityOverride[],
+) {
+  const response = await fetch(`${API_BASE_URL}/availability?month=${month}&year=${year}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ overrides }),
+  });
+
+  return parseJson<AvailabilitySnapshot>(response);
 }
 
 export async function parseSpreadsheet(file: File, month: number, year: number) {
@@ -61,7 +86,11 @@ export async function parseSpreadsheet(file: File, month: number, year: number) 
   return parseJson<ParseResult>(response);
 }
 
-export async function generateSchedule(month: number, year: number, overrides: AvailabilityOverride[]) {
+export async function generateSchedule(
+  month: number,
+  year: number,
+  overrides: AvailabilityOverride[],
+) {
   const response = await fetch(`${API_BASE_URL}/schedule/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -80,7 +109,7 @@ export async function exportScheduleCsv(schedule: ScheduleEntry[]) {
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message ?? 'Não foi possível exportar a escala.');
+    throw new Error(payload?.message ?? 'Nao foi possivel exportar a escala.');
   }
 
   return response.text();

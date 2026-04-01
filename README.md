@@ -1,6 +1,6 @@
 # Escala Louvor
 
-Aplicação full-stack em TypeScript para cadastrar membros do ministério de louvor, importar indisponibilidades por planilha e gerar escalas mensais.
+Aplicacao full-stack em TypeScript para cadastrar membros do ministerio de louvor, importar indisponibilidades por planilha e gerar escalas mensais.
 
 ## Stack
 
@@ -9,13 +9,13 @@ Aplicação full-stack em TypeScript para cadastrar membros do ministério de lo
 - Banco: MongoDB 7
 - Infra: Docker Compose
 
-## Decisões do v1
+## Decisoes do v1
 
-- Catálogo fixo de funções: `MINISTRO`, `APOIO`, `VIOLAO`, `GUITARRA`, `TECLADO`, `BAIXO`, `BATERIA`
-- Cultos fixos por mês: domingo de manhã, domingo à noite e quarta-feira
-- Indisponibilidade é temporária por sessão e não fica salva no banco
-- Escalas são geradas sob demanda e não são persistidas
-- Nomes importados que não existirem no banco aparecem como aviso e ficam fora do agendamento
+- Catalogo fixo de funcoes: `MINISTRO`, `APOIO`, `VIOLAO`, `GUITARRA`, `TECLADO`, `BAIXO`, `BATERIA`
+- Cultos fixos por mes: domingo de manha, domingo a noite e quarta-feira
+- Indisponibilidade fica salva por mes e por culto no banco
+- Escalas sao geradas sob demanda e nao sao persistidas
+- Nomes importados que nao existirem no banco aparecem como aviso e ficam fora do agendamento
 
 ## Scripts
 
@@ -29,20 +29,20 @@ Aplicação full-stack em TypeScript para cadastrar membros do ministério de lo
 
 ## Desenvolvimento local
 
-1. Instale dependências com `yarn install`
+1. Instale dependencias com `yarn install`
 2. Suba o MongoDB com Docker ou configure `MONGODB_URI`
 3. Rode `yarn dev`
 
 O frontend abre em `http://localhost:5173` e o backend em `http://localhost:3001`.
 
-## Importação
+## Importacao
 
 Formato esperado:
 
 ```csv
 Nome,Funcoes,Indisponivel
-João Silva,"Teclado, Apoio","05/04, 12/04"
-Maria Santos,"Ministro, Violão","12/04"
+Joao Silva,"Teclado, Apoio","05/04 (Domingo - manha), 12/04 (Domingo - noite)"
+Maria Santos,"Ministro, Violao","12/04 (Domingo - manha)"
 ```
 
 ## Docker

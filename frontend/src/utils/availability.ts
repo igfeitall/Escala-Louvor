@@ -1,4 +1,4 @@
-import type { ParseResult } from '../types';
+import type { AvailabilityOverride, ParseResult } from '../types';
 
 export function mergeOverridesFromParseResult(
   currentOverrides: Record<string, string[]>,
@@ -17,4 +17,20 @@ export function mergeOverridesFromParseResult(
   });
 
   return nextOverrides;
+}
+
+export function mapOverridesToPayload(overrides: Record<string, string[]>): AvailabilityOverride[] {
+  return Object.entries(overrides)
+    .map(([memberId, unavailableServiceKeys]) => ({
+      memberId,
+      unavailableServiceKeys: [...new Set(unavailableServiceKeys)].sort(),
+    }))
+    .filter((override) => override.unavailableServiceKeys.length > 0);
+}
+
+export function mapOverridesToRecord(overrides: AvailabilityOverride[]) {
+  return overrides.reduce<Record<string, string[]>>((record, override) => {
+    record[override.memberId] = [...new Set(override.unavailableServiceKeys)].sort();
+    return record;
+  }, {});
 }
