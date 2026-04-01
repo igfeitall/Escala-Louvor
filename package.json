@@ -1,0 +1,32 @@
+{
+  "name": "escala-louvor",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n fe,be -c cyan,green \"yarn workspace frontend dev\" \"yarn workspace backend dev\"",
+    "frontend": "yarn workspace frontend dev",
+    "backend": "yarn workspace backend dev",
+    "build": "yarn workspace backend build && yarn workspace frontend build",
+    "typecheck": "yarn workspace backend typecheck && yarn workspace frontend typecheck",
+    "lint": "eslint .",
+    "test": "yarn workspace backend test && yarn workspace frontend test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml}\"",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.24.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.28.0"
+  }
+}

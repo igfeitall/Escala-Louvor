@@ -1,0 +1,17 @@
+node_modules
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+dist
+coverage
+.vite
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+mongo-data
