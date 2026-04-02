@@ -14,7 +14,7 @@ interface MemberManagerProps {
   members: Member[];
   onCreate: () => void;
   onEdit: (member: Member) => void;
-  onDelete: (member: Member) => Promise<void>;
+  onDelete: (member: Member) => void;
 }
 
 export function MemberManager({ members, onCreate, onEdit, onDelete }: MemberManagerProps) {
@@ -54,7 +54,7 @@ export function MemberManager({ members, onCreate, onEdit, onDelete }: MemberMan
                   <button className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700" onClick={() => onEdit(member)}>
                     Editar
                   </button>
-                  <button className="rounded-full bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => void onDelete(member)}>
+                  <button className="rounded-full bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => onDelete(member)}>
                     Excluir
                   </button>
                 </div>

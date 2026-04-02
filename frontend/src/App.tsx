@@ -3,6 +3,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AvailabilityEditor } from './components/AvailabilityEditor';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { FileUpload } from './components/FileUpload';
 import { Header } from './components/Header';
 import { MemberForm } from './components/MemberForm';
@@ -44,6 +45,7 @@ export default function App() {
   const [year, setYear] = useState(now.getFullYear());
   const [members, setMembers] = useState<Member[]>([]);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [memberPendingDelete, setMemberPendingDelete] = useState<Member | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState('');
@@ -55,6 +57,7 @@ export default function App() {
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
   const editFormRef = useRef<HTMLDivElement | null>(null);
 
   const monthLabel = getMonthLabel(month, year);
@@ -160,22 +163,56 @@ export default function App() {
     }
   }
 
-  async function handleDeleteMember(member: Member) {
-    if (!window.confirm(`Excluir ${member.name}?`)) {
+  function handleRequestDeleteMember(member: Member) {
+    setMemberPendingDelete(member);
+  }
+
+  async function generateScheduleFrom(
+    sourceMembers: Member[],
+    sourceOverrides: Record<string, string[]>,
+  ) {
+    const validMemberIds = new Set(sourceMembers.map((member) => member.id));
+    const payload = mapOverridesToPayload(sourceOverrides).filter((override) =>
+      validMemberIds.has(override.memberId),
+    );
+    const result = await generateSchedule(month, year, payload);
+    setSchedule(result.schedule);
+  }
+
+  async function handleConfirmDeleteMember() {
+    const member = memberPendingDelete;
+
+    if (!member) {
       return;
     }
 
     const nextOverrides = { ...overrides };
     delete nextOverrides[member.id];
+    setIsDeletingMember(true);
+    const shouldRegenerateSchedule = schedule.length > 0;
 
     try {
       await deleteMember(member.id);
       setOverrides(nextOverrides);
+      setSchedule([]);
       await persistOverrides(nextOverrides);
-      toast.success('Membro removido.');
-      await loadMembers();
+      setMemberPendingDelete(null);
+      const nextMembers = await fetchMembers();
+      setMembers(nextMembers);
+
+      if (shouldRegenerateSchedule) {
+        await generateScheduleFrom(nextMembers, nextOverrides);
+      }
+
+      toast.success(
+        shouldRegenerateSchedule
+          ? 'Membro removido e escala atualizada.'
+          : 'Membro removido.',
+      );
     } catch (deleteError) {
       toast.error(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir membro.');
+    } finally {
+      setIsDeletingMember(false);
     }
   }
 
@@ -228,12 +265,7 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      const validMemberIds = new Set(members.map((member) => member.id));
-      const payload = mapOverridesToPayload(overrides).filter((override) =>
-        validMemberIds.has(override.memberId),
-      );
-      const result = await generateSchedule(month, year, payload);
-      setSchedule(result.schedule);
+      await generateScheduleFrom(members, overrides);
       toast.success('Escala gerada com sucesso.');
     } catch (generateError) {
       toast.error(generateError instanceof Error ? generateError.message : 'Erro ao gerar escala.');
@@ -350,7 +382,7 @@ export default function App() {
             setEditingMember(member);
             setShowForm(true);
           }}
-          onDelete={handleDeleteMember}
+          onDelete={handleRequestDeleteMember}
         />
 
         <FileUpload
@@ -379,6 +411,20 @@ export default function App() {
           />
         ) : null}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(memberPendingDelete)}
+        title="Excluir membro"
+        description={`Tem certeza que deseja excluir ${memberPendingDelete?.name ?? 'este membro'}? Essa ação remove também a indisponibilidade dele no mês.`}
+        confirmLabel="Excluir"
+        isProcessing={isDeletingMember}
+        onCancel={() => {
+          if (!isDeletingMember) {
+            setMemberPendingDelete(null);
+          }
+        }}
+        onConfirm={() => void handleConfirmDeleteMember()}
+      />
     </div>
   );
 }
