@@ -15,6 +15,7 @@ import {
   exportScheduleCsv,
   fetchAvailability,
   fetchMembers,
+  fetchSchedule,
   generateSchedule,
   parseSpreadsheet,
   saveAvailability,
@@ -54,6 +55,7 @@ export default function App() {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -104,16 +106,21 @@ export default function App() {
     setParseResult(null);
     setOverrides({});
     setIsLoadingAvailability(true);
+    setIsLoadingSchedule(true);
 
     void (async () => {
       try {
-        const availability = await fetchAvailability(month, year);
+        const [availability, savedSchedule] = await Promise.all([
+          fetchAvailability(month, year),
+          fetchSchedule(month, year),
+        ]);
 
         if (!isActive) {
           return;
         }
 
         setOverrides(mapOverridesToRecord(availability.overrides));
+        setSchedule(savedSchedule?.schedule ?? []);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -127,6 +134,7 @@ export default function App() {
       } finally {
         if (isActive) {
           setIsLoadingAvailability(false);
+          setIsLoadingSchedule(false);
         }
       }
     })();
@@ -339,7 +347,9 @@ export default function App() {
           <div className="flex items-end">
             <button
               className="w-full rounded-full bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
-              disabled={isGenerating || isLoadingMembers || isLoadingAvailability}
+              disabled={
+                isGenerating || isLoadingMembers || isLoadingAvailability || isLoadingSchedule
+              }
               onClick={() => void handleGenerateSchedule()}
             >
               {isGenerating ? 'Gerando...' : 'Gerar escala'}
@@ -350,6 +360,12 @@ export default function App() {
         {isLoadingAvailability ? (
           <p className="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
             Carregando disponibilidade salva para este mes...
+          </p>
+        ) : null}
+
+        {isLoadingSchedule ? (
+          <p className="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
+            Carregando escala salva para este mes...
           </p>
         ) : null}
 

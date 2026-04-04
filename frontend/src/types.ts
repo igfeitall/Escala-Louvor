@@ -68,6 +68,14 @@ export interface ScheduleEntry {
   notes: string | null;
 }
 
+export interface ScheduleSnapshot {
+  month: number;
+  year: number;
+  schedule: ScheduleEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;

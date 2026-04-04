@@ -2,10 +2,12 @@ import { Router } from 'express';
 import multer from 'multer';
 
 import { Member } from '../models/Member.js';
+import { Schedule } from '../models/Schedule.js';
 import { buildScheduleCsv } from '../services/csv.js';
 import { toMemberRecord } from '../services/memberSerializer.js';
 import { parseSpreadsheet } from '../services/parser.js';
 import { generateSchedule } from '../services/scheduler.js';
+import { toScheduleRecord } from '../services/scheduleSerializer.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/http.js';
 import { normalizeName } from '../utils/normalize.js';
@@ -28,6 +30,20 @@ function parseMonthYear(input: { month?: unknown; year?: unknown }) {
 }
 
 export const scheduleRouter = Router();
+
+scheduleRouter.get(
+  '/',
+  asyncHandler(async (request, response) => {
+    const { month, year } = parseMonthYear(request.query);
+    const schedule = await Schedule.findOne({ month, year });
+
+    if (!schedule) {
+      throw new HttpError(404, 'Escala nao encontrada para este mes.');
+    }
+
+    response.json(toScheduleRecord(schedule.toObject()));
+  }),
+);
 
 scheduleRouter.post(
   '/parse',
@@ -63,8 +79,13 @@ scheduleRouter.post(
     const members = await Member.find().sort({ name: 1 });
     const serializedMembers = members.map((member) => toMemberRecord(member.toObject()));
     const schedule = generateSchedule(serializedMembers, overrides, month, year);
+    const savedSchedule = await Schedule.findOneAndUpdate(
+      { month, year },
+      { month, year, schedule },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
+    );
 
-    response.json({ month, year, schedule });
+    response.json(toScheduleRecord(savedSchedule.toObject()));
   }),
 );
 
