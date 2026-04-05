@@ -67,3 +67,14 @@ export interface ScheduleEntry {
   bateria: string | null;
   notes: string | null;
 }
+
+export interface DeleteDialogProps {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  isProcessing?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}

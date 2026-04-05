@@ -54,7 +54,6 @@ membersRouter.delete(
       throw new HttpError(404, 'Membro nao encontrado.');
     }
 
-    // Remove monthly availability first to avoid returning an error after member is already deleted.
     await MonthlyAvailability.deleteMany({ memberId: request.params.id });
     await member.deleteOne();
     response.status(204).send();

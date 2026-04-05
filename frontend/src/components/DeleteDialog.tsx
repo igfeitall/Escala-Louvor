@@ -1,13 +1,4 @@
-interface DeleteDialogProps {
-  isOpen: boolean;
-  title: string;
-  description: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  isProcessing?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
+import { DeleteDialogProps} from "../types"
 
 export function DeleteDialog({
   isOpen,
