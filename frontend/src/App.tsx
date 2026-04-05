@@ -26,6 +26,7 @@ import {
   mergeOverridesFromParseResult,
 } from './utils/availability';
 import { getMonthLabel, getMonthOptionLabel, getServiceSlots } from './utils/calendar';
+import { createScheduleWhatsAppMessage, exportSchedulePdf } from './utils/scheduleExport';
 
 function downloadCsv(csv: string, month: number, year: number) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -251,6 +252,25 @@ export default function App() {
     }
   }
 
+  function handleExportPdf() {
+    try {
+      exportSchedulePdf(schedule, month, year);
+      toast.success('PDF exportado com sucesso.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao exportar PDF.');
+    }
+  }
+
+  function handleShareWhatsApp() {
+    try {
+      const message = createScheduleWhatsAppMessage(schedule, month, year);
+      const shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao preparar mensagem do WhatsApp.');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#f6f1e8_0%,_#efe3d4_100%)] text-ink">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar pauseOnFocusLoss={false} />
@@ -351,7 +371,12 @@ export default function App() {
         />
 
         {schedule.length > 0 ? (
-          <ScheduleTable schedule={schedule} onExport={handleExportCsv} />
+          <ScheduleTable
+            schedule={schedule}
+            onExportCsv={handleExportCsv}
+            onExportPdf={handleExportPdf}
+            onShareWhatsApp={handleShareWhatsApp}
+          />
         ) : null}
       </div>
     </div>

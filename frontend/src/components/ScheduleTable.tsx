@@ -3,22 +3,32 @@ import { formatIsoDate } from '../utils/calendar';
 
 interface ScheduleTableProps {
   schedule: ScheduleEntry[];
-  onExport: () => Promise<void>;
+  onExportCsv: () => Promise<void>;
+  onExportPdf: () => void;
+  onShareWhatsApp: () => void;
 }
 
-export function ScheduleTable({ schedule, onExport }: ScheduleTableProps) {
+export function ScheduleTable({
+  schedule,
+  onExportCsv,
+  onExportPdf,
+  onShareWhatsApp,
+}: ScheduleTableProps) {
   return (
     <section className="space-y-5 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-panel print:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="font-display text-2xl text-ink">Escala gerada</h2>
-          <p className="text-sm text-stone-600">Imprima a tabela ou exporte em CSV com a mesma ordenação oficial.</p>
+          <p className="text-sm text-stone-600">Exporte a tabela nos formatos disponíveis com a mesma ordenação oficial.</p>
         </div>
         <div className="flex gap-3">
-          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={() => window.print()}>
-            Imprimir
+          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={onExportPdf}>
+            Baixar PDF
           </button>
-          <button className="rounded-full bg-accent px-5 py-3 font-semibold text-white" onClick={() => void onExport()}>
+          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={onShareWhatsApp}>
+            WhatsApp
+          </button>
+          <button className="rounded-full bg-accent px-5 py-3 font-semibold text-white" onClick={() => void onExportCsv()}>
             Exportar CSV
           </button>
         </div>
