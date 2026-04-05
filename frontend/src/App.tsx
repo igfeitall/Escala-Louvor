@@ -3,6 +3,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AvailabilityEditor } from './components/AvailabilityEditor';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { FileUpload } from './components/FileUpload';
 import { Header } from './components/Header';
 import { MemberForm } from './components/MemberForm';
@@ -14,6 +15,7 @@ import {
   exportScheduleCsv,
   fetchAvailability,
   fetchMembers,
+  fetchSchedule,
   generateSchedule,
   parseSpreadsheet,
   saveAvailability,
@@ -26,6 +28,7 @@ import {
   mergeOverridesFromParseResult,
 } from './utils/availability';
 import { getMonthLabel, getMonthOptionLabel, getServiceSlots } from './utils/calendar';
+import { createScheduleWhatsAppMessage, exportSchedulePdf } from './utils/scheduleExport';
 
 function downloadCsv(csv: string, month: number, year: number) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -43,6 +46,7 @@ export default function App() {
   const [year, setYear] = useState(now.getFullYear());
   const [members, setMembers] = useState<Member[]>([]);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [memberPendingDelete, setMemberPendingDelete] = useState<Member | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState('');
@@ -51,9 +55,11 @@ export default function App() {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
   const editFormRef = useRef<HTMLDivElement | null>(null);
 
   const monthLabel = getMonthLabel(month, year);
@@ -100,16 +106,21 @@ export default function App() {
     setParseResult(null);
     setOverrides({});
     setIsLoadingAvailability(true);
+    setIsLoadingSchedule(true);
 
     void (async () => {
       try {
-        const availability = await fetchAvailability(month, year);
+        const [availability, savedSchedule] = await Promise.all([
+          fetchAvailability(month, year),
+          fetchSchedule(month, year),
+        ]);
 
         if (!isActive) {
           return;
         }
 
         setOverrides(mapOverridesToRecord(availability.overrides));
+        setSchedule(savedSchedule?.schedule ?? []);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -123,6 +134,7 @@ export default function App() {
       } finally {
         if (isActive) {
           setIsLoadingAvailability(false);
+          setIsLoadingSchedule(false);
         }
       }
     })();
@@ -159,22 +171,56 @@ export default function App() {
     }
   }
 
-  async function handleDeleteMember(member: Member) {
-    if (!window.confirm(`Excluir ${member.name}?`)) {
+  function handleRequestDeleteMember(member: Member) {
+    setMemberPendingDelete(member);
+  }
+
+  async function generateScheduleFrom(
+    sourceMembers: Member[],
+    sourceOverrides: Record<string, string[]>,
+  ) {
+    const validMemberIds = new Set(sourceMembers.map((member) => member.id));
+    const payload = mapOverridesToPayload(sourceOverrides).filter((override) =>
+      validMemberIds.has(override.memberId),
+    );
+    const result = await generateSchedule(month, year, payload);
+    setSchedule(result.schedule);
+  }
+
+  async function handleConfirmDeleteMember() {
+    const member = memberPendingDelete;
+
+    if (!member) {
       return;
     }
 
     const nextOverrides = { ...overrides };
     delete nextOverrides[member.id];
+    setIsDeletingMember(true);
+    const shouldRegenerateSchedule = schedule.length > 0;
 
     try {
       await deleteMember(member.id);
       setOverrides(nextOverrides);
+      setSchedule([]);
       await persistOverrides(nextOverrides);
-      toast.success('Membro removido.');
-      await loadMembers();
+      setMemberPendingDelete(null);
+      const nextMembers = await fetchMembers();
+      setMembers(nextMembers);
+
+      if (shouldRegenerateSchedule) {
+        await generateScheduleFrom(nextMembers, nextOverrides);
+      }
+
+      toast.success(
+        shouldRegenerateSchedule
+          ? 'Membro removido e escala atualizada.'
+          : 'Membro removido.',
+      );
     } catch (deleteError) {
       toast.error(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir membro.');
+    } finally {
+      setIsDeletingMember(false);
     }
   }
 
@@ -227,12 +273,7 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      const validMemberIds = new Set(members.map((member) => member.id));
-      const payload = mapOverridesToPayload(overrides).filter((override) =>
-        validMemberIds.has(override.memberId),
-      );
-      const result = await generateSchedule(month, year, payload);
-      setSchedule(result.schedule);
+      await generateScheduleFrom(members, overrides);
       toast.success('Escala gerada com sucesso.');
     } catch (generateError) {
       toast.error(generateError instanceof Error ? generateError.message : 'Erro ao gerar escala.');
@@ -248,6 +289,25 @@ export default function App() {
       toast.success('CSV exportado com sucesso.');
     } catch (exportError) {
       toast.error(exportError instanceof Error ? exportError.message : 'Erro ao exportar CSV.');
+    }
+  }
+
+  function handleExportPdf() {
+    try {
+      exportSchedulePdf(schedule, month, year);
+      toast.success('PDF exportado com sucesso.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao exportar PDF.');
+    }
+  }
+
+  function handleShareWhatsApp() {
+    try {
+      const message = createScheduleWhatsAppMessage(schedule, month, year);
+      const shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao preparar mensagem do WhatsApp.');
     }
   }
 
@@ -287,7 +347,9 @@ export default function App() {
           <div className="flex items-end">
             <button
               className="w-full rounded-full bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
-              disabled={isGenerating || isLoadingMembers || isLoadingAvailability}
+              disabled={
+                isGenerating || isLoadingMembers || isLoadingAvailability || isLoadingSchedule
+              }
               onClick={() => void handleGenerateSchedule()}
             >
               {isGenerating ? 'Gerando...' : 'Gerar escala'}
@@ -298,6 +360,12 @@ export default function App() {
         {isLoadingAvailability ? (
           <p className="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
             Carregando disponibilidade salva para este mes...
+          </p>
+        ) : null}
+
+        {isLoadingSchedule ? (
+          <p className="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
+            Carregando escala salva para este mes...
           </p>
         ) : null}
 
@@ -330,7 +398,7 @@ export default function App() {
             setEditingMember(member);
             setShowForm(true);
           }}
-          onDelete={handleDeleteMember}
+          onDelete={handleRequestDeleteMember}
         />
 
         <FileUpload
@@ -351,9 +419,28 @@ export default function App() {
         />
 
         {schedule.length > 0 ? (
-          <ScheduleTable schedule={schedule} onExport={handleExportCsv} />
+          <ScheduleTable
+            schedule={schedule}
+            onExportCsv={handleExportCsv}
+            onExportPdf={handleExportPdf}
+            onShareWhatsApp={handleShareWhatsApp}
+          />
         ) : null}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(memberPendingDelete)}
+        title="Excluir membro"
+        description={`Tem certeza que deseja excluir ${memberPendingDelete?.name ?? 'este membro'}? Essa ação remove também a indisponibilidade dele no mês.`}
+        confirmLabel="Excluir"
+        isProcessing={isDeletingMember}
+        onCancel={() => {
+          if (!isDeletingMember) {
+            setMemberPendingDelete(null);
+          }
+        }}
+        onConfirm={() => void handleConfirmDeleteMember()}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type {
   Member,
   ParseResult,
   ScheduleEntry,
+  ScheduleSnapshot,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
@@ -97,7 +98,17 @@ export async function generateSchedule(
     body: JSON.stringify({ month, year, overrides }),
   });
 
-  return parseJson<{ month: number; year: number; schedule: ScheduleEntry[] }>(response);
+  return parseJson<ScheduleSnapshot>(response);
+}
+
+export async function fetchSchedule(month: number, year: number) {
+  const response = await fetch(`${API_BASE_URL}/schedule?month=${month}&year=${year}`);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  return parseJson<ScheduleSnapshot>(response);
 }
 
 export async function exportScheduleCsv(schedule: ScheduleEntry[]) {

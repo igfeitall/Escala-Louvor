@@ -67,3 +67,22 @@ export interface ScheduleEntry {
   bateria: string | null;
   notes: string | null;
 }
+
+export interface ScheduleSnapshot {
+  month: number;
+  year: number;
+  schedule: ScheduleEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfirmDialogProps {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  isProcessing?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}

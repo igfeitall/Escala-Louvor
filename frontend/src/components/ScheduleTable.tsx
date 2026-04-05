@@ -3,10 +3,17 @@ import { formatIsoDate } from '../utils/calendar';
 
 interface ScheduleTableProps {
   schedule: ScheduleEntry[];
-  onExport: () => Promise<void>;
+  onExportCsv: () => Promise<void>;
+  onExportPdf: () => void;
+  onShareWhatsApp: () => void;
 }
 
-export function ScheduleTable({ schedule, onExport }: ScheduleTableProps) {
+export function ScheduleTable({
+  schedule,
+  onExportCsv,
+  onExportPdf,
+  onShareWhatsApp,
+}: ScheduleTableProps) {
   return (
     <section className="space-y-5 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-panel print:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
@@ -18,7 +25,13 @@ export function ScheduleTable({ schedule, onExport }: ScheduleTableProps) {
           <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={() => window.print()}>
             Imprimir
           </button>
-          <button className="rounded-full bg-accent px-5 py-3 font-semibold text-white" onClick={() => void onExport()}>
+          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={onExportPdf}>
+            Baixar PDF
+          </button>
+          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={onShareWhatsApp}>
+            WhatsApp
+          </button>
+          <button className="rounded-full bg-accent px-5 py-3 font-semibold text-white" onClick={() => void onExportCsv()}>
             Exportar CSV
           </button>
         </div>
