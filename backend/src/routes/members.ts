@@ -48,13 +48,14 @@ membersRouter.put(
 membersRouter.delete(
   '/:id',
   asyncHandler(async (request, response) => {
-    const deletedMember = await Member.findByIdAndDelete(request.params.id);
+    const member = await Member.findById(request.params.id);
 
-    if (!deletedMember) {
+    if (!member) {
       throw new HttpError(404, 'Membro nao encontrado.');
     }
 
     await MonthlyAvailability.deleteMany({ memberId: request.params.id });
+    await member.deleteOne();
     response.status(204).send();
   }),
 );
