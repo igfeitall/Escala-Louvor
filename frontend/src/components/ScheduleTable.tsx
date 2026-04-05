@@ -19,12 +19,9 @@ export function ScheduleTable({
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="font-display text-2xl text-ink">Escala gerada</h2>
-          <p className="text-sm text-stone-600">Imprima a tabela ou exporte em CSV com a mesma ordenação oficial.</p>
+          <p className="text-sm text-stone-600">Exporte a tabela nos formatos disponíveis com a mesma ordenação oficial.</p>
         </div>
         <div className="flex gap-3">
-          <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={() => window.print()}>
-            Imprimir
-          </button>
           <button className="rounded-full border border-stone-300 px-5 py-3 font-semibold text-stone-700" onClick={onExportPdf}>
             Baixar PDF
           </button>
