@@ -1,9 +1,18 @@
 import { Router } from 'express';
 
-import { MonthlyAvailability } from '../models/MonthlyAvailability.js';
+import { authMiddleware } from '../middleware/auth.js';
+import {
+  findAvailability,
+  replaceAvailability,
+} from '../repositories/availabilityRepository.js';
+import { resolveWorkspace } from '../repositories/workspaceRepository.js';
 import type { AvailabilityOverride } from '../types/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/http.js';
+
+export const availabilityRouter = Router();
+
+availabilityRouter.use(authMiddleware);
 
 function parseMonthYear(input: { month?: unknown; year?: unknown }) {
   const month = Number(input.month);
@@ -50,22 +59,14 @@ function validateOverrides(input: unknown): AvailabilityOverride[] {
   });
 }
 
-export const availabilityRouter = Router();
-
 availabilityRouter.get(
   '/',
   asyncHandler(async (request, response) => {
     const { month, year } = parseMonthYear(request.query);
-    const documents = await MonthlyAvailability.find({ month, year }).sort({ memberId: 1 });
+    const workspace = await resolveWorkspace(request.userId);
+    const overrides = await findAvailability(month, year, workspace);
 
-    response.json({
-      month,
-      year,
-      overrides: documents.map((document) => ({
-        memberId: document.memberId,
-        unavailableServiceKeys: document.unavailableServiceKeys,
-      })),
-    });
+    response.json({ month, year, overrides });
   }),
 );
 
@@ -73,26 +74,14 @@ availabilityRouter.put(
   '/',
   asyncHandler(async (request, response) => {
     const { month, year } = parseMonthYear(request.query);
+    const workspace = await resolveWorkspace(request.userId);
     const overrides = validateOverrides(request.body.overrides);
-    const cleanedOverrides = overrides.filter((override) => override.unavailableServiceKeys.length > 0);
+    const cleanedOverrides = overrides.filter(
+      (override) => override.unavailableServiceKeys.length > 0,
+    );
 
-    await MonthlyAvailability.deleteMany({ month, year });
+    await replaceAvailability(month, year, cleanedOverrides, workspace);
 
-    if (cleanedOverrides.length > 0) {
-      await MonthlyAvailability.insertMany(
-        cleanedOverrides.map((override) => ({
-          memberId: override.memberId,
-          month,
-          year,
-          unavailableServiceKeys: override.unavailableServiceKeys,
-        })),
-      );
-    }
-
-    response.json({
-      month,
-      year,
-      overrides: cleanedOverrides,
-    });
+    response.json({ month, year, overrides: cleanedOverrides });
   }),
 );

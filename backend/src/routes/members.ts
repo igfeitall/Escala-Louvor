@@ -1,60 +1,81 @@
 import { Router } from 'express';
 
-import { Member } from '../models/Member.js';
-import { MonthlyAvailability } from '../models/MonthlyAvailability.js';
-import { toMemberRecord } from '../services/memberSerializer.js';
+import { authMiddleware } from '../middleware/auth.js';
+import {
+  createMember,
+  deleteMember,
+  findMemberById,
+  findMembers,
+  toMemberRecord,
+  updateMember,
+} from '../repositories/membersRepository.js';
+import { resolveWorkspace } from '../repositories/workspaceRepository.js';
 import { validateMemberInput } from '../services/memberValidation.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/http.js';
 
 export const membersRouter = Router();
 
+membersRouter.use(authMiddleware);
+
+function getMemberId(input: unknown) {
+  if (typeof input !== 'string' || !input) {
+    throw new HttpError(400, 'Identificador invalido.');
+  }
+
+  return input;
+}
+
 membersRouter.get(
   '/',
-  asyncHandler(async (_request, response) => {
-    const members = await Member.find().sort({ name: 1 });
-    response.json(members.map((member) => toMemberRecord(member.toObject())));
+  asyncHandler(async (request, response) => {
+    const { ministryId } = await resolveWorkspace(request.userId);
+    const members = await findMembers(ministryId);
+    response.json(members.map((member) => toMemberRecord(member)));
   }),
 );
 
 membersRouter.post(
   '/',
   asyncHandler(async (request, response) => {
+    const { ministryId } = await resolveWorkspace(request.userId);
     const data = validateMemberInput(request.body);
-    const member = await Member.create(data);
-    response.status(201).json(toMemberRecord(member.toObject()));
+    const member = await createMember({ ...data, ministryId });
+    response.status(201).json(toMemberRecord(member));
   }),
 );
 
 membersRouter.put(
   '/:id',
   asyncHandler(async (request, response) => {
+    const memberId = getMemberId(request.params.id);
     const data = validateMemberInput(request.body);
-    const member = await Member.findById(request.params.id);
+    const existingMember = await findMemberById(memberId);
+
+    if (!existingMember) {
+      throw new HttpError(404, 'Membro nao encontrado.');
+    }
+
+    const member = await updateMember(memberId, data);
 
     if (!member) {
       throw new HttpError(404, 'Membro nao encontrado.');
     }
 
-    member.name = data.name;
-    member.roles = data.roles;
-    member.notes = data.notes;
-    await member.save();
-
-    response.json(toMemberRecord(member.toObject()));
+    response.json(toMemberRecord(member));
   }),
 );
 
 membersRouter.delete(
   '/:id',
   asyncHandler(async (request, response) => {
-    const deletedMember = await Member.findByIdAndDelete(request.params.id);
+    const memberId = getMemberId(request.params.id);
+    const deletedMember = await deleteMember(memberId);
 
     if (!deletedMember) {
       throw new HttpError(404, 'Membro nao encontrado.');
     }
 
-    await MonthlyAvailability.deleteMany({ memberId: request.params.id });
     response.status(204).send();
   }),
 );

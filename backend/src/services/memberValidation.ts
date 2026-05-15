@@ -2,13 +2,19 @@ import { ROLE_OPTIONS, type Role } from '../constants/roles.js';
 import { HttpError } from '../utils/http.js';
 
 interface MemberInput {
+  ministryId?: unknown;
   name?: unknown;
+  email?: unknown;
+  phone?: unknown;
   roles?: unknown;
   notes?: unknown;
 }
 
 export function validateMemberInput(input: MemberInput) {
+  const ministryId = typeof input.ministryId === 'string' ? input.ministryId.trim() : undefined;
   const name = typeof input.name === 'string' ? input.name.trim() : '';
+  const email = typeof input.email === 'string' ? input.email.trim() : undefined;
+  const phone = typeof input.phone === 'string' ? input.phone.trim() : undefined;
   const roles = Array.isArray(input.roles) ? input.roles : [];
   const notes = typeof input.notes === 'string' ? input.notes.trim() : undefined;
 
@@ -35,7 +41,10 @@ export function validateMemberInput(input: MemberInput) {
   });
 
   return {
+    ministryId: ministryId || undefined,
     name,
+    email: email || undefined,
+    phone: phone || undefined,
     roles: normalizedRoles.filter((role, index) => normalizedRoles.indexOf(role) === index),
     notes: notes || undefined,
   };

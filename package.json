@@ -18,7 +18,11 @@
     "docker:up": "docker compose up -d",
     "docker:db:up": "docker compose up -d",
     "docker:db:reset": "docker compose down -v && docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "db:psql": "docker compose exec postgres psql -U escala_louvor -d escala_louvor",
+    "wait:db": "sh scripts/wait-db.sh",
+    "db:seed": "yarn workspace backend db:seed",
+    "megadev": "yarn docker:up && yarn wait:db && yarn db:seed && yarn dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
@@ -29,6 +33,7 @@
     "globals": "^16.0.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.28.0"
+    "typescript-eslint": "^8.28.0",
+    "wait-on": "^9.0.10"
   }
 }

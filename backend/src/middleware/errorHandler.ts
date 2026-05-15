@@ -1,7 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
-import mongoose from 'mongoose';
+import type { DatabaseError } from 'pg';
 
 import { HttpError } from '../utils/http.js';
+
+function isDatabaseError(error: unknown): error is DatabaseError {
+  return typeof error === 'object' && error !== null && 'code' in error;
+}
 
 export function errorHandler(
   error: unknown,
@@ -16,19 +20,21 @@ export function errorHandler(
     return;
   }
 
-  if (error instanceof mongoose.Error.ValidationError) {
-    response.status(400).json({ message: error.message });
-    return;
-  }
-
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: number }).code === 11000
-  ) {
-    response.status(409).json({ message: 'Já existe um membro com este nome.' });
-    return;
+  if (isDatabaseError(error)) {
+    switch (error.code) {
+      case '23505':
+        response.status(409).json({ message: 'Ja existe um registro com estes dados.' });
+        return;
+      case '23503':
+        response.status(400).json({ message: 'Registro relacionado nao encontrado.' });
+        return;
+      case '23514':
+        response.status(400).json({ message: 'Dados invalidos para esta regra do banco.' });
+        return;
+      case '22P02':
+        response.status(400).json({ message: 'Identificador invalido.' });
+        return;
+    }
   }
 
   const message = error instanceof Error ? error.message : 'Erro interno do servidor.';
